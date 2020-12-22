@@ -1,0 +1,39 @@
+{
+	"ID": "daeb48f748cb30728c5a4e87ff63e965",
+	"TypeName": "FlaxEngine.Prefab",
+	"EngineBuild": 6214,
+	"Data": [
+	{
+		"ID": "417b1b4a4cc30a61942320bb40b59ee8",
+		"TypeName": "FlaxEngine.EmptyActor",
+		"Name": "Player",
+		"StaticFlags": 0
+	},
+	{
+		"ID": "9ec9d00b434337c186c19ca63a6632b9",
+		"TypeName": "Game.Player",
+		"ParentID": "417b1b4a4cc30a61942320bb40b59ee8",
+		"V": {
+	"Model": "be6c25a4485911bea335c29990b1ff53"
+}
+	},
+	{
+		"ID": "be6c25a4485911bea335c29990b1ff53",
+		"TypeName": "FlaxEngine.StaticModel",
+		"ParentID": "417b1b4a4cc30a61942320bb40b59ee8",
+		"Name": "Model",
+		"StaticFlags": 0,
+		"Model": "3f82e57744f57c28285150b646ad2198",
+		"Buffer": {
+			"Entries": [
+				{
+					"Material": "00000000000000000000000000000000",
+					"ShadowsMode": 3,
+					"Visible": true,
+					"ReceiveDecals": true
+				}
+			]
+		}
+	}
+]
+}
