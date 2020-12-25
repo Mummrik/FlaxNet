@@ -13,6 +13,7 @@ namespace Server
 
         public static IPEndPoint GetEndPoint() => endpoint;
         public static Dictionary<uint, Connection> connections = null;
+        public static bool debugPackages = false;
 
         public const short BUFFER_SIZE = 8192;
 
@@ -64,7 +65,7 @@ namespace Server
             NetworkMessage msg = new NetworkMessage(data);
 
             // Debug what packets received
-            if (msg.MsgType() != MsgType.Ping)
+            if (debugPackages && msg.MsgType() != MsgType.Ping)
                 Console.WriteLine($"[UDP] Connection [{client.Id}] Received MsgType: {msg.MsgType()}");
 
             if (Packets.List.TryGetValue(msg.MsgType(), out Action<Connection, NetworkMessage> packet))

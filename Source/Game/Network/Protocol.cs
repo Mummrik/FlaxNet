@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -33,12 +34,12 @@ namespace Game
 
         public Prefab playerPrefab;
 
-        public static Dictionary<uint, Player> players;
+        public static ConcurrentDictionary<uint, Player> players;
 
         public override void OnAwake()
         {
             Packets.InitPacketList(this);
-            players = new Dictionary<uint, Player>();
+            players = new ConcurrentDictionary<uint, Player>();
             Connect(host, port);
         }
         public override void OnDestroy()
@@ -112,7 +113,7 @@ namespace Game
             NetworkMessage msg = new NetworkMessage(data);
             if (Packets.protocol.debugPackets)
             {
-                Debug.Log($"Received MsgType: {msg.MsgType()}");
+                Debug.Log($"[UDP] Received MsgType: {msg.MsgType()}");
             }
 
             if (Packets.List.TryGetValue(msg.MsgType(), out Action<Connection, NetworkMessage> packet))

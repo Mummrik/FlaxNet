@@ -53,7 +53,7 @@ namespace Game
 
             Actor actor = PrefabManager.SpawnPrefab(prefab, position);
             actor.Name = $"Player[{id}]";
-            Protocol.players.Add(id, actor.GetScript<Player>());
+            Protocol.players.TryAdd(id, actor.GetScript<Player>());
 
             if (client.GetId() == id)
                 protocol.ExecuteAction(() =>

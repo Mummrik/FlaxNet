@@ -89,7 +89,7 @@ namespace Game
             NetworkMessage msg = new NetworkMessage(data);
             if (Packets.protocol.debugPackets)
             {
-                Debug.Log($"Received MsgType: {msg.MsgType()}");
+                Debug.Log($"[TCP] Received MsgType: {msg.MsgType()}");
             }
 
             if (Packets.List.TryGetValue(msg.MsgType(), out Action<Connection, NetworkMessage> packet))
