@@ -82,6 +82,7 @@ namespace Game
         {
             uint id = msg.ReadUInt();
             client.SetId(id);
+
             protocol.ConnectUdp();
         }
 

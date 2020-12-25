@@ -37,9 +37,11 @@ namespace Server
             msg.Send(this);
         }
 
-
         private void OnRead(IAsyncResult ar)
         {
+            if (!tcpClient.Connected)
+                return;
+
             int bytes = tcpClient.GetStream().EndRead(ar);
 
             if (bytes > 0)
@@ -67,12 +69,17 @@ namespace Server
                     ReadBuffer.Clear();
                     packetSize = default;
                 }
+
+                if (tcpClient.Connected)
+                {
+                    tcpClient.GetStream().BeginRead(buffer, default, buffer.Length, OnRead, tcpClient);
+                }
+            }
+            else
+            {
+                Disconnect();
             }
 
-            if (tcpClient.Connected)
-            {
-                tcpClient.GetStream().BeginRead(buffer, default, buffer.Length, OnRead, tcpClient);
-            }
         }
 
         private void OnHandle(byte[] data)
@@ -80,8 +87,8 @@ namespace Server
             NetworkMessage msg = new NetworkMessage(data);
 
             // Debug what packets received
-            //if (msg.MsgType() != MsgType.Ping)
-            //    Console.WriteLine($"[TCP] Connection [{id}] Received MsgType: {msg.MsgType()}");
+            if (msg.MsgType() != MsgType.Ping)
+                Console.WriteLine($"[TCP] Connection [{id}] Received MsgType: {msg.MsgType()}");
 
             if (Packets.List.TryGetValue(msg.MsgType(), out Action<Connection, NetworkMessage> packet))
             {

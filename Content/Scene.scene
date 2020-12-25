@@ -71,7 +71,6 @@
 			"ParentID": "63ee0373462fa686968e3799faf7a0d2",
 			"V": {
 	"ping": "365a244f41fcb0c7e021f88ee22fad1f",
-	"debugPackets": false,
 	"playerPrefab": "daeb48f748cb30728c5a4e87ff63e965"
 }
 		},

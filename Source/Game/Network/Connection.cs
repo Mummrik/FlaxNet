@@ -71,6 +71,7 @@ namespace Game
                 }
 
             }
+
             if (tcpClient.Connected)
             {
                 tcpClient.GetStream().BeginRead(buffer, 0, buffer.Length, OnRead, tcpClient);

@@ -33,11 +33,12 @@ namespace Game
 
         public Prefab playerPrefab;
 
-        public static Dictionary<uint, Player> players = new Dictionary<uint, Player>();
+        public static Dictionary<uint, Player> players;
 
         public override void OnAwake()
         {
             Packets.InitPacketList(this);
+            players = new Dictionary<uint, Player>();
             Connect(host, port);
         }
         public override void OnDestroy()
