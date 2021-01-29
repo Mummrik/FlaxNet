@@ -8,16 +8,14 @@ public class Game : GameModule
     {
         base.Init();
 
-        // C#-only scripting
-        BuildNativeCode = false;
+		// C#-only scripting
+		BuildNativeCode = false;
     }
 
     /// <inheritdoc />
     public override void Setup(BuildOptions options)
     {
         base.Setup(options);
-
-        options.ScriptingAPI.IgnoreMissingDocumentationWarnings = true;
 
         // Here you can modify the build options for your game module
         // To reference another module use: options.PublicDependencies.Add("Audio");

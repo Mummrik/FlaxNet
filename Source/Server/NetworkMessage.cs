@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,69 +9,106 @@ namespace Server
 {
     public class NetworkMessage : IDisposable
     {
-        private List<byte> body;
-        private MsgType msgType;
-        private int size;
-        private bool sizeSet;
-        private int index;
+        private Guid m_Id;
+        private Guid m_ClientId;
+        private MsgType m_MsgType;
+        private List<byte> m_Body;
+        private int m_Index;
+        private int m_Size;
+        private int m_FullSize;
+        private bool m_SizeSet;
 
-        /// <summary>
-        /// Create a new network message, that later on can be sent to a client.
-        /// </summary>
-        /// <param name="type">Indicate what type of message this will be.</param>
-        public NetworkMessage(MsgType type)
+        public NetworkMessage(MsgType msgType)
         {
-            if (body != null)
-                body.Clear();
+            if (m_Body == null)
+                m_Body = new List<byte>();
+            else
+                m_Body.Clear();
 
-            body = new List<byte>();
-            size = default;
-            sizeSet = false;
-            index = default;
+            m_Index = default;
+            m_Size = m_Body.Count;
+            m_SizeSet = m_Size > 0;
 
-            msgType = type;
-            body.InsertRange(default, BitConverter.GetBytes((int)msgType));
+            m_MsgType = msgType;
+            Write((int)m_MsgType);
         }
 
-        /// <summary>
-        /// Create a new network message, with data that a client has sent.
-        /// </summary>
-        /// <param name="data">Array of data, that a client sent.</param>
         public NetworkMessage(byte[] data)
         {
-            body = new List<byte>(data);
-            size = body.Count();
-            sizeSet = true;
-            index = sizeof(int);
+            m_Body = new List<byte>(data);
+            m_Index = default;
+            //m_Index = sizeof(int);
+            m_Size = m_Body.Count;
+            m_SizeSet = m_Size > 0;
 
-            msgType = (MsgType)ReadInt();
+            m_FullSize = ReadInt();
+
+            m_Id = ReadGuid();
+            m_ClientId = ReadGuid();
+            m_MsgType = (MsgType)ReadInt();
         }
 
-        public MsgType MsgType() => msgType;
-        public int Size() => size;
-        public void Send(Connection receiver, ProtocolType protocol = ProtocolType.Tcp)
+        /// <summary>
+        /// Get the MsgType this message contains
+        /// </summary>
+        /// <returns>MsgType that the packet list will invoke</returns>
+        public MsgType MsgType() => m_MsgType;
+        /// <summary>
+        /// Get the full size of the packet
+        /// </summary>
+        /// <returns></returns>
+        /// 
+        public int Size() => m_Size;
+        /// <summary>
+        /// Get the Guid that the packet should be sent to.
+        /// </summary>
+        /// <returns></returns>
+        public Guid GetClientId() => m_ClientId;
+        /// <summary>
+        /// Get the unique packet id, mainly used for reliable packets
+        /// </summary>
+        /// <returns></returns>
+        public Guid PacketId() => m_Id;
+        /// <summary>
+        /// Get the packet body as byte array
+        /// </summary>
+        /// <returns></returns>
+        public byte[] ToArray() => m_Body.ToArray();
+
+        public void Send(Connection receiver, bool isReliable = false)
         {
-            // Do i need to check if the size is set? would cause problem if sending to multiply clients
-            if (!sizeSet)
+            if (m_SizeSet == false)
             {
-                size += sizeof(int);
-                body.InsertRange(default, BitConverter.GetBytes(size));
-                sizeSet = true;
+                if (isReliable)
+                {
+                    m_Id = Guid.NewGuid();
+                    receiver.reliableMsgs.TryAdd(m_Id, this);
+                }
+
+                m_ClientId = receiver.GetId();
+
+                m_Body.InsertRange(default, m_ClientId.ToByteArray());
+                m_Body.InsertRange(default, m_Id.ToByteArray());
+
+                //m_Size += 32;
+                m_Size += 32 + sizeof(int);   // add size of 2 guid (msgid and clientid) and the actual size of the msg body
+                m_Body.InsertRange(default, BitConverter.GetBytes(m_Size));
+                m_SizeSet = true;
             }
-            Task.Run(() => { receiver.Send(ToArray(), protocol); });
+
+            Task.Run(() => { receiver.Send(ToArray()); });
         }
-        public byte[] ToArray() => body.ToArray();
 
         #region Write
         public void Write(byte value)
         {
-            body.Add(value);
-            size = body.Count();
+            m_Body.Add(value);
+            m_Size = m_Body.Count;
         }
         public void Write(byte[] values)
         {
-            body.AddRange(values);
-            size = body.Count();
+            m_Body.AddRange(values);
+            m_Size = m_Body.Count;
         }
         public void Write(short value) => Write(BitConverter.GetBytes(value));
         public void Write(ushort value) => Write(BitConverter.GetBytes(value));
@@ -109,9 +145,11 @@ namespace Server
         }
         public void Write(Guid value)
         {
-            byte[] bytes = value.ToByteArray();
-            Write((byte)bytes.Length);
-            Write(bytes);
+            Write(value.ToByteArray());
+
+            //byte[] bytes = value.ToByteArray();
+            //Write((byte)bytes.Length);
+            //Write(bytes);
         }
 
         #endregion Write
@@ -119,71 +157,71 @@ namespace Server
         #region Read
         public byte ReadByte()
         {
-            if (index + sizeof(byte) > size)
+            if (m_Index + sizeof(byte) > m_Size)
                 return default;
-            return body.ElementAt(index++);
+            return m_Body.ElementAt(m_Index++);
         }
         public byte[] ReadBytes(int length)
         {
             byte[] bytes = new byte[length];
-            Array.Copy(body.ToArray(), index, bytes, default, length);
-            index += length;
+            Array.Copy(m_Body.ToArray(), m_Index, bytes, default, length);
+            m_Index += length;
             return bytes;
         }
         public short ReadShort()
         {
-            if (index + sizeof(short) > size)
+            if (m_Index + sizeof(short) > m_Size)
                 return default;
             return BitConverter.ToInt16(ReadBytes(sizeof(short)), default);
         }
         public ushort ReadUShort()
         {
-            if (index + sizeof(ushort) > size)
+            if (m_Index + sizeof(ushort) > m_Size)
                 return default;
             return BitConverter.ToUInt16(ReadBytes(sizeof(ushort)), default);
         }
         public int ReadInteger() => ReadInt();
         public int ReadInt()
         {
-            if (index + sizeof(int) > size)
+            if (m_Index + sizeof(int) > m_Size)
                 return default;
             return BitConverter.ToInt32(ReadBytes(sizeof(int)), default);
         }
         public uint ReadUInt()
         {
-            if (index + sizeof(uint) > size)
+            if (m_Index + sizeof(uint) > m_Size)
                 return default;
             return BitConverter.ToUInt32(ReadBytes(sizeof(uint)), default);
         }
         public long ReadLong()
         {
-            if (index + sizeof(long) > size)
+            if (m_Index + sizeof(long) > m_Size)
                 return default;
             return BitConverter.ToInt64(ReadBytes(sizeof(long)), default);
         }
         public ulong ReadULong()
         {
-            if (index + sizeof(ulong) > size)
+            if (m_Index + sizeof(ulong) > m_Size)
                 return default;
             return BitConverter.ToUInt64(ReadBytes(sizeof(ulong)), default);
         }
         public bool ReadBoolean() => ReadBool();
         public bool ReadBool()
         {
-            if (index + sizeof(bool) > size)
+            if (m_Index + sizeof(bool) > m_Size)
                 return default;
             return BitConverter.ToBoolean(ReadBytes(sizeof(bool)), default);
         }
         public float ReadSingle() => ReadFloat();
         public float ReadFloat()
         {
-            if (index + sizeof(float) > size)
+            if (m_Index + sizeof(float) > m_Size)
                 return default;
             return BitConverter.ToSingle(ReadBytes(sizeof(float)), default);
         }
         public double ReadDouble()
         {
-            if (index + sizeof(double) > size)
+            if (m_Index + sizeof(double) > m_Size)
                 return default;
             return BitConverter.ToDouble(ReadBytes(sizeof(double)), default);
         }
@@ -217,7 +255,7 @@ namespace Server
         }
         public Guid ReadGuid()
         {
-            return new Guid(ReadBytes(ReadByte()));
+            return new Guid(ReadBytes(16));
         }
         #endregion Read
 
@@ -230,11 +268,13 @@ namespace Server
 
             if (disposing)
             {
-                body.Clear();
-                body = null;
-                msgType = default;
-                size = default;
-                index = default;
+                m_Body.Clear();
+                m_Body = null;
+                //m_Id = default;
+                //m_ClientId = default;
+                //m_MsgType = default;
+                //m_Index = default;
+                //m_Size = default;
             }
             isDisposed = true;
         }

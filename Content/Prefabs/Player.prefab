@@ -1,33 +1,51 @@
 {
-	"ID": "daeb48f748cb30728c5a4e87ff63e965",
+	"ID": "1ef72ed44d2aeff971b040a94dcbffab",
 	"TypeName": "FlaxEngine.Prefab",
-	"EngineBuild": 6214,
+	"EngineBuild": 6215,
 	"Data": [
 	{
-		"ID": "417b1b4a4cc30a61942320bb40b59ee8",
+		"ID": "54c80ecd4d86dfe55b045e9e9c487d93",
 		"TypeName": "FlaxEngine.EmptyActor",
 		"Name": "Player",
 		"StaticFlags": 0
 	},
 	{
-		"ID": "9ec9d00b434337c186c19ca63a6632b9",
+		"ID": "2e8e5635458c51ab9492f8a471fc743a",
 		"TypeName": "Game.Player",
-		"ParentID": "417b1b4a4cc30a61942320bb40b59ee8",
+		"ParentID": "54c80ecd4d86dfe55b045e9e9c487d93",
 		"V": {
-	"Model": "be6c25a4485911bea335c29990b1ff53"
+	"Model": "a52e7f2b4edcce067c9d76b5b8152f66",
+	"AnimGraph": "afd6a62a412d91d431a87f8a9688398c",
+	"AnimModel": "d771bb5b4d5b298f9e6292b9b8803f11"
 }
 	},
 	{
-		"ID": "be6c25a4485911bea335c29990b1ff53",
-		"TypeName": "FlaxEngine.StaticModel",
-		"ParentID": "417b1b4a4cc30a61942320bb40b59ee8",
+		"ID": "d771bb5b4d5b298f9e6292b9b8803f11",
+		"TypeName": "FlaxEngine.AnimatedModel",
+		"ParentID": "54c80ecd4d86dfe55b045e9e9c487d93",
 		"Name": "Model",
-		"StaticFlags": 0,
-		"Model": "3f82e57744f57c28285150b646ad2198",
+		"Buffer": {
+			"Entries": []
+		}
+	},
+	{
+		"ID": "3245ede144074bea4adbd38a441f9346",
+		"TypeName": "FlaxEngine.StaticModel",
+		"ParentID": "d771bb5b4d5b298f9e6292b9b8803f11",
+		"Name": "ForwardArrow",
+		"Transform": {
+			"Orientation": {
+				"X": 0.0,
+				"Y": -0.7071068286895752,
+				"Z": 0.0,
+				"W": 0.7071068286895752
+			}
+		},
+		"Model": "f3cd6ea146509fec53b63ab53610dd4f",
 		"Buffer": {
 			"Entries": [
 				{
-					"Material": "00000000000000000000000000000000",
+					"Material": "e448085a4958f904fe3a6db6cd353d42",
 					"ShadowsMode": 3,
 					"Visible": true,
 					"ReceiveDecals": true

@@ -1,14 +1,3 @@
-{
-	"ID": "1bf4eedd41508974d6646e8faa55420a",
-	"TypeName": "FlaxEditor.Content.Settings.LinuxPlatformSettings",
-	"EngineBuild": 6213,
-	"Data": {
-	"WindowMode": 0,
-	"ScreenWidth": 1280,
-	"ScreenHeight": 720,
-	"ResizableWindow": false,
-	"RunInBackground": false,
-	"ForceSingleInstance": false,
-	"SupportVulkan": true
-}
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:a99c239a065d57dcae81f2d5d0881b1ac3827d76743cac168442e09a88eeb883
+size 324

@@ -1,12 +1,3 @@
-{
-	"ID": "9acd18b0496064d35799f390d3a2b374",
-	"TypeName": "FlaxEditor.Content.Settings.TimeSettings",
-	"EngineBuild": 6214,
-	"Data": {
-	"UpdateFPS": 60.0,
-	"PhysicsFPS": 60.0,
-	"DrawFPS": 60.0,
-	"TimeScale": 1.0,
-	"MaxUpdateDeltaTime": 0.1
-}
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:58b6ff822d2440eeb452937c8601bd024b998d24a8231d939e5c18a1a5373106
+size 249

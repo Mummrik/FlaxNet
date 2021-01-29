@@ -1,15 +1,3 @@
-{
-	"ID": "4eaf325e4cd72aa4cdeb6393cad05466",
-	"TypeName": "FlaxEditor.Content.Settings.GraphicsSettings",
-	"EngineBuild": 6213,
-	"Data": {
-	"UseVSync": true,
-	"AAQuality": 1,
-	"SSRQuality": 1,
-	"SSAOQuality": 1,
-	"VolumetricFogQuality": 1,
-	"ShadowsQuality": 1,
-	"ShadowMapsQuality": 1,
-	"AllowCSMBlending": false
-}
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:e6f70425dd77f406da6f064ae6079f6b86d2b3ee1474479728b15ac078262553
+size 326

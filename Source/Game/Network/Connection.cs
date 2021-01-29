@@ -3,129 +3,166 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using FlaxEngine;
 
 namespace Game
 {
     public class Connection
     {
-        private uint id;
-        private TcpClient tcpClient = null;
-        private UdpClient udpClient = null;
+        private const bool DEBUG_PACKETS = false;
 
-        private byte[] buffer = new byte[Protocol.BUFFER_SIZE];
-        private List<byte> ReadBuffer = new List<byte>();
-        private int packetSize;
+        private Guid m_Id;
+        private UdpClient m_UdpClient;
+        private IPEndPoint m_EndPoint;
+        private Guid[] m_RecentMsgs = new Guid[byte.MaxValue];
+        private byte m_RecentMsgIndex = default;
+        private short m_Ping = -1;
 
-        public static CancellationTokenSource s_MasterToken;
+        public bool Connected = false;
+        public Dictionary<Guid, NetworkMessage> reliableMsgs = new Dictionary<Guid, NetworkMessage>();
 
-        public Connection(IPEndPoint endpoint, UdpClient refUdpClient)
+        public short Ping
         {
-            s_MasterToken = new CancellationTokenSource();
-            tcpClient = new TcpClient();
-
-            udpClient = refUdpClient;
-
-            tcpClient.Connect(endpoint);
-            tcpClient.GetStream().BeginRead(buffer, default, buffer.Length, OnRead, tcpClient);
-
+            get => m_Ping;
+            set
+            {
+                if (m_Ping != value)
+                {
+                    m_Ping = value;
+                    PingText.s_PingText.Text = $"Ping: {m_Ping}";
+                    PingText.s_PingText.TextColor = m_Ping < 50 ? Color.LimeGreen : m_Ping < 150 ? Color.Yellow : Color.Red;
+                }
+            }
         }
 
-        public uint GetId() => id;
-        public void SetId(uint newId)
+        public Connection(string host, ushort port)
         {
-            if (id != 0)
+            m_EndPoint = new IPEndPoint(IPAddress.Parse(host), port);
+            m_UdpClient = new UdpClient();
+
+            Task.Run(() => { m_UdpClient.Connect(m_EndPoint); }).Wait();
+            m_UdpClient.BeginReceive(OnRead, m_UdpClient);
+            new Thread(new ThreadStart(ReliableLoop)).Start();
+        }
+
+        private void ReliableLoop()
+        {
+            float pingTimer = 0;
+            while (!Protocol.s_MasterToken.IsCancellationRequested)
+            {
+                if (reliableMsgs.Count > 0)
+                {
+                    var msgs = reliableMsgs.Values;
+                    foreach (var msg in msgs)
+                    {
+                        msg.Send();
+                    }
+                }
+
+                if (Connected)
+                {
+                    pingTimer += 0.1f;
+                    if (pingTimer > 3)
+                    {
+                        NetworkMessage msg = new NetworkMessage(MsgType.Ping);
+                        msg.Write(Ping);
+                        msg.Write(DateTime.Now.Ticks);
+                        msg.Send();
+                        pingTimer = default;
+                    }
+                }
+
+                Thread.Sleep(100);
+            }
+        }
+
+        public Guid GetId() => m_Id;
+        public void SetId(Guid cid)
+        {
+            if (m_Id != Guid.Empty)
                 return;
 
-            id = newId;
+            m_Id = cid;
         }
 
         private void OnRead(IAsyncResult ar)
         {
-            int bytes = tcpClient.GetStream().EndRead(ar);
-
-            if (bytes > 0)
+            byte[] data = m_UdpClient.EndReceive(ar, ref m_EndPoint);
+            if (data.Length > 0)
             {
-                if (packetSize == default)
-                {
-                    byte[] size = new byte[sizeof(int)];
-                    for (int i = 0; i < size.Length; i++)
-                        size[i] = buffer[i];
+                NetworkMessage msg = null;
 
-                    packetSize = BitConverter.ToInt32(size, default);
+                try
+                {
+                    msg = new NetworkMessage(data);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"\n>> Warning: Couldn't create networkmessage of received data from [{m_EndPoint}]\n{e}");
+                    m_UdpClient.BeginReceive(OnRead, m_UdpClient);
+                    return;
                 }
 
-                foreach (byte b in buffer)
-                {
-                    if (ReadBuffer.Count < packetSize)
-                        ReadBuffer.Add(b);
-                    else
-                        break;
-                }
-
-                if (ReadBuffer.Count >= packetSize)
-                {
-                    OnHandle(ReadBuffer.ToArray());
-                    ReadBuffer.Clear();
-                    packetSize = default;
-                }
-
+                OnHandle(msg);
             }
 
-            if (tcpClient.Connected)
-            {
-                tcpClient.GetStream().BeginRead(buffer, 0, buffer.Length, OnRead, tcpClient);
-            }
+            m_UdpClient.BeginReceive(OnRead, m_UdpClient);
         }
 
-        private void OnHandle(byte[] data)
+        private void OnHandle(NetworkMessage msg)
         {
-            int latency = Packets.protocol.simulateLatency;
-            if (latency > 0)
+            if (msg.PacketId() != Guid.Empty && MsgHasBeenHandle(msg.PacketId()))
             {
-                Thread.Sleep(latency);
-            }
-
-            NetworkMessage msg = new NetworkMessage(data);
-            if (Packets.protocol.debugPackets)
-            {
-                Debug.Log($"[TCP] Received MsgType: {msg.MsgType()}");
+                Notify(msg.PacketId());
+                return;
             }
 
             if (Packets.List.TryGetValue(msg.MsgType(), out Action<Connection, NetworkMessage> packet))
             {
-                packet.Invoke(this, msg);
+                Task.Run(() => packet.Invoke(this, msg)).Wait();
             }
-            else
+
+            if (msg.PacketId() != Guid.Empty)
             {
-                Disconnect();
+                m_RecentMsgs[m_RecentMsgIndex++] = msg.PacketId();
+                if (m_RecentMsgIndex == m_RecentMsgs.Length - 1)
+                    m_RecentMsgIndex = default;
+
+                Notify(msg.PacketId());
             }
+
+            if (DEBUG_PACKETS)
+                Debug.Log($"[UDP] Connection [{m_Id}] Received MsgType: {msg.MsgType()}");
+
+            msg.Dispose();
         }
 
-        public void Send(byte[] data, ProtocolType protocol = ProtocolType.Tcp)
+        private bool MsgHasBeenHandle(Guid msgId)
         {
-            if (tcpClient != null && tcpClient.Connected)
-                if (protocol == ProtocolType.Udp)
-                {
-                    udpClient.BeginSend(data, data.Length, (ar) =>
-                    {
-                        if (tcpClient.Connected)
-                            udpClient.EndSend(ar);
-                    }, udpClient);
-                }
-                else
-                {
-                    tcpClient.Client.BeginSend(data, 0, data.Length, SocketFlags.None, (ar) =>
-                    {
-                        if (tcpClient.Connected)
-                            tcpClient.Client.EndSend(ar);
-                    }, tcpClient);
-                }
+            foreach (var id in m_RecentMsgs)
+                if (id == msgId)
+                    return true;
+
+            return false;
         }
 
-        private void Disconnect()
+        private void Notify(Guid packetId)
         {
-            tcpClient.Close();
+            NetworkMessage notify = new NetworkMessage(MsgType.Notify);
+            notify.Write(packetId);
+            notify.Send();
+        }
+
+        internal void Send(byte[] data)
+        {
+            m_UdpClient.BeginSend(data, data.Length, (ar) => m_UdpClient.EndSend(ar), m_UdpClient);
+        }
+
+        public void Disconnect()
+        {
+            Connected = false;
+            //m_UdpClient.Client.Disconnect(false);
         }
     }
 }

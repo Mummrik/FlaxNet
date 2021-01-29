@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -7,121 +8,41 @@ namespace Server
 {
     public class Connection
     {
-        private uint id;
-        private TcpClient tcpClient;
-        private UdpClient udpClient;
-        public IPEndPoint endpoint;
+        private Guid m_Id;
+        private UdpClient m_UdpClient;
+        private IPEndPoint m_EndPoint;
 
-        private byte[] buffer = new byte[Protocol.BUFFER_SIZE];
-        private List<byte> ReadBuffer = new List<byte>();
-        private int packetSize;
+        public bool Connected = false;
+        public ConcurrentDictionary<Guid, NetworkMessage> reliableMsgs = new ConcurrentDictionary<Guid, NetworkMessage>();
+        public Guid[] recentMsgs = new Guid[byte.MaxValue];
+        public byte recentMsgIndex = default;
+        public short ping;
+        public Player player = null;
 
-        public Creature player;
-        public uint Id { get => id; }
-        public Connection(uint uid, TcpClient newClient, UdpClient refUdpClient)
+        public Connection(Guid id, UdpClient udpClient, IPEndPoint endPoint)
         {
-            id = uid;
-            tcpClient = newClient;
-            udpClient = refUdpClient;
-            endpoint = (IPEndPoint)tcpClient.Client.RemoteEndPoint;
+            m_Id = id;
+            m_UdpClient = udpClient;
+            m_EndPoint = endPoint;
 
-            Console.WriteLine($"[{DateTime.Now.ToString("H:mm:ss")}] Connection [{id}] | {endpoint}");
+            Console.WriteLine($"[{DateTime.Now.ToString("H:mm:ss")}] Connection [{m_Id}] | {m_EndPoint}");
 
-            tcpClient.GetStream().BeginRead(buffer, default, buffer.Length, OnRead, tcpClient);
-
-            //TODO: Send Handshake message
-
-            // Test message
-            NetworkMessage msg = new NetworkMessage(MsgType.Connect);
-            msg.Write(id);
-            msg.Send(this);
+            NetworkMessage msg = new NetworkMessage(MsgType.HandShake);
+            msg.Write(m_Id);
+            msg.Write("Hello Client");
+            msg.Send(this, true);
         }
 
-        private void OnRead(IAsyncResult ar)
+        public Guid GetId() => m_Id;
+        internal void Send(byte[] data)
         {
-            if (!tcpClient.Connected)
-                return;
-
-            int bytes = tcpClient.GetStream().EndRead(ar);
-
-            if (bytes > 0)
-            {
-                if (packetSize == default)
-                {
-                    byte[] size = new byte[sizeof(int)];
-                    for (int i = 0; i < size.Length; i++)
-                        size[i] = buffer[i];
-
-                    packetSize = BitConverter.ToInt32(size, default);
-                }
-
-                foreach (byte b in buffer)
-                {
-                    if (ReadBuffer.Count < packetSize)
-                        ReadBuffer.Add(b);
-                    else
-                        break;
-                }
-
-                if (ReadBuffer.Count >= packetSize)
-                {
-                    OnHandle(ReadBuffer.ToArray());
-                    ReadBuffer.Clear();
-                    packetSize = default;
-                }
-
-                if (tcpClient.Connected)
-                {
-                    tcpClient.GetStream().BeginRead(buffer, default, buffer.Length, OnRead, tcpClient);
-                }
-            }
-            else
-            {
-                Disconnect();
-            }
-
-        }
-
-        private void OnHandle(byte[] data)
-        {
-            NetworkMessage msg = new NetworkMessage(data);
-
-            // Debug what packets received
-            if (Protocol.debugPackages && msg.MsgType() != MsgType.Ping)
-                Console.WriteLine($"[TCP] Connection [{id}] Received MsgType: {msg.MsgType()}");
-
-            if (Packets.List.TryGetValue(msg.MsgType(), out Action<Connection, NetworkMessage> packet))
-            {
-                packet.Invoke(this, msg);
-            }
-            else
-            {
-                Disconnect();
-            }
-
-            msg.Dispose();
-        }
-
-        public async void Send(byte[] data, ProtocolType protocol = ProtocolType.Tcp)
-        {
-            if (tcpClient != null && tcpClient.Connected)
-            {
-                if (protocol == ProtocolType.Udp)
-                {
-                    udpClient.BeginSend(data, data.Length, endpoint, (ar) => { udpClient.EndSend(ar); }, udpClient);
-                }
-                else
-                {
-                    tcpClient.Client.BeginSend(data, 0, data.Length, SocketFlags.None, (ar) => { tcpClient.Client.EndSend(ar); }, tcpClient);
-                }
-            }
+            m_UdpClient.BeginSend(data, data.Length, m_EndPoint, (ar) => { m_UdpClient.EndSend(ar); }, m_UdpClient);
         }
 
         public void Disconnect()
         {
-            Console.WriteLine($"[{DateTime.Now.ToString("H:mm:ss")}] Disconnect [{id}] | {tcpClient.Client.RemoteEndPoint}");
-            Protocol.connections.Remove(id);
-            tcpClient.Close();
+            Console.WriteLine($"[{DateTime.Now.ToString("H:mm:ss")}] Disconnect [{m_Id}] | {m_EndPoint}");
+            Protocol.s_Connections.Remove(m_Id);
         }
     }
 }

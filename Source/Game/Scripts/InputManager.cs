@@ -1,30 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
 using FlaxEngine;
 
 namespace Game
 {
     public class InputManager : Script
     {
-        public Player owner = null;
-        private Vector2 moveDirection;
+        CameraManager camera;
 
-        public override void OnUpdate()
+        public override void OnStart()
         {
-            OnMove();
+            camera = Actor.GetScript<CameraManager>();
+        }
+        public override void OnFixedUpdate()
+        {
+            OnMovementInput();
+            if (Input.MouseScrollDelta != 0)
+            {
+                camera.Zoom(Input.MouseScrollDelta);
+            }
         }
 
-        private void OnMove()
+        private void OnMovementInput()
         {
-            moveDirection = Vector2.UnitX * Input.GetAxis("Horizontal") + Vector2.UnitY * Input.GetAxis("Vertical");
-            if (moveDirection != Vector2.Zero)
-            {
-                NetworkMessage msg = new NetworkMessage(MsgType.MoveDirection);
-                msg.Write(moveDirection);
-                msg.Send(ProtocolType.Udp);
-            }
+            Vector2 direction = Vector2.UnitX * Input.GetAxis("Horizontal") +
+                                    Vector2.UnitY * Input.GetAxis("Vertical");
 
+            if (direction != Vector2.Zero)
+            {
+                NetworkMessage msg = new NetworkMessage(MsgType.Movement);
+                msg.Write(direction);
+                msg.Send();
+            }
         }
     }
 }

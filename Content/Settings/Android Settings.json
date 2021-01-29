@@ -1,8 +1,3 @@
-{
-	"ID": "9ac06a884463f4ae9435e2b03c866259",
-	"TypeName": "FlaxEditor.Content.Settings.AndroidPlatformSettings",
-	"EngineBuild": 6213,
-	"Data": {
-	"PackageName": "com.${COMPANY_NAME}.${PROJECT_NAME}"
-}
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:bba6374f721f41a3f14e582fcf739c3af2f9c458f64cc6ed71068ef6870ff83f
+size 210

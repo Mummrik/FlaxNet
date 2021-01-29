@@ -1,12 +1,3 @@
-{
-	"ID": "8660bbf44f1ea61cb9bc4580b3631973",
-	"TypeName": "FlaxEditor.Content.Settings.UWPPlatformSettings",
-	"EngineBuild": 6213,
-	"Data": {
-	"PreferredLaunchWindowingMode": 0,
-	"AutoRotationPreferences": 15,
-	"CertificateLocation": "",
-	"SupportDX11": true,
-	"SupportDX10": false
-}
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:681124172693c138a7a94e0120f86851a0ab2665db914c8f0f1dfbe2744bb319
+size 290

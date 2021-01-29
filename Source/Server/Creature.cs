@@ -1,43 +1,62 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
 using System.Numerics;
-using System.Text;
 
 namespace Server
 {
     public class Creature
     {
-        private uint id;
-        private Vector3 position;
-        private float speed = 5f;
+        public Creature(Guid id) => m_Id = id;
 
-        public Creature(uint id)
+        protected Guid m_Id;
+        protected Vector3 m_Position;
+        protected Quaternion m_Rotation;
+        protected List<Creature> m_Spectators = new List<Creature>();
+        protected float m_Speed = 5;
+        protected ushort m_WorldInstance;
+
+        public Guid Id { get => m_Id; }
+        public Vector3 Position
         {
-            this.id = id;
+            get => m_Position;
+            set
+            {
+                if (m_Position != value)
+                {
+                    m_Position = value;
+
+                    NetworkMessage msg = new NetworkMessage(MsgType.Movement);
+                    msg.Write(Id);
+                    msg.Write(Position);
+                    msg.Write(m_Speed);
+                    Protocol.SendToAll(msg);
+                }
+            }
         }
 
-        public uint GetID() => id;
-        public Vector3 GetPosition() => position;
-
-        public void Move(Vector2 direction)
+        public Quaternion Rotation
         {
-            if (direction == Vector2.Zero)
-                return;
-
-            var dirNormalized = Vector2.Normalize(direction);
-            position += new Vector3(dirNormalized.X, position.Y, dirNormalized.Y) * speed;
-
-            NetworkMessage msg = new NetworkMessage(MsgType.MoveDirection);
-            msg.Write(id);
-            msg.Write(position);
-            msg.Write(speed);
-            //msg.Send(Protocol.connections[id], ProtocolType.Udp);
-
-            foreach (var client in Protocol.connections.Values)
+            get => m_Rotation;
+            set
             {
-                msg.Send(client, ProtocolType.Udp);
+                if (m_Rotation != value)
+                {
+                    m_Rotation = value;
+
+                    //NetworkMessage msg = new NetworkMessage(MsgType.Movement);
+                    //msg.Write(Id);
+                    //msg.Write(Position);
+                    //msg.Write(m_Speed);
+                    //Protocol.SendToAll(msg);
+                }
             }
+        }
+
+        public ushort WorldInstance { get => m_WorldInstance; protected set => m_WorldInstance = value; }
+
+        public virtual void Move(Vector2 direction)
+        {
+
         }
     }
 }

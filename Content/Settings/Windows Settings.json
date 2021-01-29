@@ -1,17 +1,3 @@
-{
-	"ID": "79ac390447f4263e30f56e9190a70dbc",
-	"TypeName": "FlaxEditor.Content.Settings.WindowsPlatformSettings",
-	"EngineBuild": 6214,
-	"Data": {
-	"WindowMode": 0,
-	"ScreenWidth": 1280,
-	"ScreenHeight": 720,
-	"ResizableWindow": false,
-	"RunInBackground": true,
-	"ForceSingleInstance": false,
-	"SupportDX12": false,
-	"SupportDX11": true,
-	"SupportDX10": false,
-	"SupportVulkan": false
-}
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:e36090ee962d0734861c2d2d4b49f751c996c7901da4361b9c26495a5551aafa
+size 398
